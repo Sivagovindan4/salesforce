@@ -4,11 +4,12 @@ Scanzaa is a Next.js application with the existing admin workspace, a PostgreSQL
 
 ## Local setup
 
-1. Install Node.js 20+ and PostgreSQL 14+.
-2. Run `npm install` in `Frontend/`.
-3. Copy `.env.example` to `.env`; set `DATABASE_URL` to a PostgreSQL database and replace `SESSION_SECRET`.
-4. Run `npm run db:migrate`, then `npm run db:seed`.
-5. Run `npm run dev` and open http://localhost:3000.
+1. Install Node.js 20+ and Docker Desktop, then start Docker Desktop.
+2. From the repository root, run `docker compose up -d` to start the local PostgreSQL database. It listens on `localhost:5432` with the development database settings from `.env.example`.
+3. In `Frontend/`, run `npm install`. Running `npm install` from the repository root fails because the app's `package.json` is in `Frontend/`.
+4. Copy `.env.example` to `.env` if needed; keep `DATABASE_URL` pointed at the local database and replace `SESSION_SECRET` for your environment.
+5. In `Frontend/`, run `npm run db:migrate`, then `npm run db:seed`.
+6. Run `npm run dev` and open http://localhost:3000.
 
 The seed creates a development super-admin (`admin@scanzaa.local` / `Scanzaa-Dev-2026!`) and sample restaurant, menu item, and table QR. Override credentials using `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`; do not use the sample password outside local development.
 

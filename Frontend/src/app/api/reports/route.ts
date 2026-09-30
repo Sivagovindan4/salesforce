@@ -4,12 +4,18 @@ import { requireUser } from '@/lib/auth';
 import { jsonError } from '@/lib/http';
 
 function period(range: string, customFrom?:string|null, customTo?:string|null) {
+  if (customFrom && customTo) {
+    const start = new Date(customFrom); const end = new Date(customTo);
+    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && start <= end) return { start, end };
+  }
+  if (range === 'Custom range') throw new Error('INVALID_REPORT_DATE_RANGE');
   const end = new Date(); const start = new Date(end);
-  if (range === 'Today') start.setHours(0,0,0,0);
-  else if (range === 'Last 30 days') start.setDate(start.getDate()-30);
+  start.setHours(0,0,0,0);
+  if (range === 'Today') { /* start is already local midnight */ }
+  else if (range === 'Last 7 days') start.setDate(start.getDate()-6);
+  else if (range === 'Last 30 days') start.setDate(start.getDate()-29);
   else if (range === 'This month') start.setDate(1);
-  else if(range==='Custom range'&&customFrom&&customTo){const parsedStart=new Date(`${customFrom}T00:00:00`);const parsedEnd=new Date(`${customTo}T23:59:59.999`);if(!Number.isNaN(parsedStart.getTime())&&!Number.isNaN(parsedEnd.getTime())&&parsedStart<=parsedEnd)return {start:parsedStart,end:parsedEnd};}
-  else start.setDate(start.getDate()-7);
+  else start.setDate(start.getDate()-6);
   return { start, end };
 }
 
@@ -43,5 +49,8 @@ export async function GET(req: NextRequest) {
     const average=ratings.length?ratings.reduce((a,b)=>a+b,0)/ratings.length:0;
     const scans=data.reduce((sum,row)=>sum+Number(row.Scans||0),0);
     return NextResponse.json({type,range,from:start.toISOString(),to:end.toISOString(),data,metrics:{rows:data.length,revenue:amounts,averageRating:average,scans}});
-  } catch(error) { return jsonError(error); }
+  } catch(error) {
+    if (error instanceof Error && error.message === 'INVALID_REPORT_DATE_RANGE') return NextResponse.json({error:'Invalid report date range'}, {status:400});
+    return jsonError(error);
+  }
 }

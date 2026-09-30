@@ -36,3 +36,10 @@ export async function requireUser(permission?: string) {
   if (permission && !globalAdmin && !allowed) throw new Error('FORBIDDEN');
   return user;
 }
+export async function requireAnyPermission(...permissions: string[]) {
+  const user = await requireUser();
+  const globalAdmin = user.role === 'SUPER_ADMIN' || user.role === 'COMPANY_ADMIN';
+  const allowed = permissions.some(permission => user.roleAssignments.some(x => x.permission.key === permission));
+  if (!globalAdmin && !allowed) throw new Error('FORBIDDEN');
+  return user;
+}
