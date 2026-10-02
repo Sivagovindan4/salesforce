@@ -25,20 +25,35 @@ export async function currentUser() {
   try {
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString()) as { userId: string; exp: number };
     if (data.exp < Date.now()) return null;
-    return db.user.findUnique({ where: { id: data.userId }, include: { roleAssignments: { include: { permission: true } } } });
+    return db.user.findUnique({ where: { id: data.userId }, include: { roleAssignments: { include: { permission: true } }, memberships: { select: { restaurantId: true, status: true } } } });
   } catch { return null; }
 }
-export async function requireUser(permission?: string) {
+export function isGlobalAdmin(user: { role: string }) {
+  return user.role === 'SUPER_ADMIN' || user.role === 'COMPANY_ADMIN';
+}
+
+export async function requireUser(permission?: string, restaurantId?: string) {
   const user = await currentUser();
   if (!user || user.status !== 'ACTIVE') throw new Error('UNAUTHORIZED');
-  const globalAdmin = user.role === 'SUPER_ADMIN' || user.role === 'COMPANY_ADMIN';
+  const globalAdmin = isGlobalAdmin(user);
   const allowed = user.roleAssignments.some(x => x.permission.key === permission);
   if (permission && !globalAdmin && !allowed) throw new Error('FORBIDDEN');
+  if (restaurantId && !globalAdmin && !user.memberships.some(membership => membership.restaurantId === restaurantId && membership.status === 'ACTIVE')) throw new Error('FORBIDDEN');
+  return user;
+}
+
+export function accessibleRestaurantIds(user: { role: string; memberships: { restaurantId: string; status: string }[] }) {
+  return isGlobalAdmin(user) ? null : user.memberships.filter(membership => membership.status === 'ACTIVE').map(membership => membership.restaurantId);
+}
+
+export async function requireGlobalAdmin(permission?: string) {
+  const user = await requireUser(permission);
+  if (!isGlobalAdmin(user)) throw new Error('FORBIDDEN');
   return user;
 }
 export async function requireAnyPermission(...permissions: string[]) {
   const user = await requireUser();
-  const globalAdmin = user.role === 'SUPER_ADMIN' || user.role === 'COMPANY_ADMIN';
+  const globalAdmin = isGlobalAdmin(user);
   const allowed = permissions.some(permission => user.roleAssignments.some(x => x.permission.key === permission));
   if (!globalAdmin && !allowed) throw new Error('FORBIDDEN');
   return user;

@@ -134,6 +134,8 @@ model MenuItem {
   foodType       FoodType
   cuisine        String?
   price          Decimal @db.Decimal(10, 2)
+  pricingOptions Json?
+  nutrition      Json?
   quantity       Decimal @db.Decimal(10, 2)
   unit           String
   servingSize    String
